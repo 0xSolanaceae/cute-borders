@@ -1,6 +1,6 @@
 use crate::util::get_file;
 use lazy_static::lazy_static;
-use std::{io::Write, sync::Mutex};
+use std::{collections::HashSet, io::Write, sync::Mutex};
 
 lazy_static! {
   static ref LOGGER: Mutex<Logger> = Mutex::new(Logger::new().unwrap());
@@ -8,7 +8,7 @@ lazy_static! {
 
 pub struct Logger {
   file: std::fs::File,
-  last_message: Option<String>,
+  logged_messages: HashSet<String>,
 }
 
 impl Logger {
@@ -16,17 +16,15 @@ impl Logger {
     let file = get_file("log.txt", "");
     Ok(Logger {
       file,
-      last_message: None,
+      logged_messages: HashSet::new(),
     })
   }
 
   pub fn log(message: &str) {
     let mut logger = LOGGER.lock().unwrap();
 
-    if let Some(ref last_message) = logger.last_message {
-      if last_message == message {
-        return; // Don't log the same message again (can't be bothered to do it properly :3)
-      }
+    if logger.logged_messages.contains(message) {
+      return; // Don't log the same message again
     }
 
     let formatted_message = format!("{}\n", message);
@@ -36,6 +34,6 @@ impl Logger {
       .expect("Failed to write to log");
     logger.file.flush().expect("Failed to flush log");
 
-    logger.last_message = Some(message.to_string());
+    logger.logged_messages.insert(message.to_string());
   }
 }
